@@ -27,7 +27,7 @@
   R K B Q K B K R
 
 * Development Log
-** TODO Find assets
+** DONE Find assets
    [2021-11-27 sab 08:56]
 
    I was thinking of getting both chess pieces as assets as well as
@@ -42,7 +42,12 @@
    I checked and apparently the board does not look bad at all if I
    manually draw it.
 
-** TODO Display board
+   As far as the other assets go, these look good enough for my taste,
+   and they should be free to use.
+
+   https://commons.wikimedia.org/wiki/Category:SVG_chess_pieces
+
+** DONE Display board
    [2021-11-27 sab 08:57]
 
    To display the board I used the following code
@@ -73,7 +78,18 @@ void render_board(SDL_Renderer *renderer) {
 }
    #+end_src
 
+** TODO Display pieces
+   [2021-11-27 sab 09:18]
 
-** TODO Display pieces   
+   In the link shown previously I could download ~.svg~ assets. Then I
+   found the following article
 
-   
+   https://lazyfoo.net/tutorials/SDL/06_extension_libraries_and_loading_other_image_formats/index.php
+
+   which discusses how to deal with png images using SDL2.
+
+   Maybe I can do the following:
+
+   1. First I conver the .svg downloaded assets into png.
+
+   2. Then I import the png assets following the above linked guide.

@@ -1,0 +1,79 @@
+#+TITLE: Chess in C (ft. SDL2)
+#+AUTHOR: Leonardo Tamiano
+
+* Idea
+  The basic idea is to implement the classical chess game in C using
+  the library SDL2.
+
+* Game Info
+  The board in chess is an 8x8 board.
+
+  There are two types players: the white player and the black player.
+
+  Each player has 16 distinct pieces, each of which has a particular
+  class type, which determinies how it can move on the board. The
+  division is done as follows:
+
+  - PAWNS, these are 8   (P)
+  - ROOKS, these are 2   (R)
+  - KNIGHTS, these are 2 (K)
+  - BISHOPS, these are 2 (B)
+  - QUEEN, only 1        (Q)
+  - KING, only 1         (K)
+
+  Their initial positioning is as follows:
+
+  P P P P P P P P
+  R K B Q K B K R
+
+* Development Log
+** TODO Find assets
+   [2021-11-27 sab 08:56]
+
+   I was thinking of getting both chess pieces as assets as well as
+   the chess board.
+
+   But, thinking about it: what if I just manually draw the board
+   instead? How bad would it look like?
+
+   --------------------------------
+   [2021-11-27 sab 09:11]
+
+   I checked and apparently the board does not look bad at all if I
+   manually draw it.
+
+** TODO Display board
+   [2021-11-27 sab 08:57]
+
+   To display the board I used the following code
+
+   #+begin_src c
+void render_board(SDL_Renderer *renderer) {
+  int counter, col;
+  int colors[] = {GRID_COLOR_1, GRID_COLOR_2};
+  
+  for (int x = 0 ; x < BOARD_WIDTH; x++) {
+    counter = x % 2;
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      col = colors[counter];
+      scc(SDL_SetRenderDrawColor(renderer, HEX_COLOR(col)));
+
+      SDL_Rect rect = {
+	(int) floorf(x * CELL_WIDTH),
+	(int) floorf(y * CELL_HEIGHT),
+	(int) floorf(CELL_WIDTH),
+	(int) floorf(CELL_HEIGHT),
+      };
+
+      scc(SDL_RenderFillRect(renderer, &rect));
+
+      counter = (counter + 1) % 2;
+    }
+  }
+}
+   #+end_src
+
+
+** TODO Display pieces   
+
+   

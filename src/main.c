@@ -1,5 +1,22 @@
+/*
+  Dipendenze:
+
+  - SDL2
+
+    sudo pacman -S sdl2 (archlinux)
+    sudo apt-get install libsdl2-dev (ubuntu)
+
+  - SDL2_Image
+
+    sudo pacman -S sdl2_image (archlinux)
+    sudo apt-get install ??? (ubuntu)
+
+ */
+
+
 #include <stdio.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 
 #define SCREEN_WIDTH  600
 #define SCREEN_HEIGHT 600
@@ -80,6 +97,12 @@ int main(void) {
   SDL_Window *const window = scp(SDL_CreateWindow("Description", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE));  
   SDL_Renderer *const renderer = scp(SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED));
 
+  // init image SDL
+  IMG_Init(IMG_INIT_PNG);
+
+  SDL_Surface *image = IMG_Load("../assets/black_king.svg");
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, image);
+  
   int quit = 0;
   
   while(!quit) {
@@ -95,9 +118,29 @@ int main(void) {
     scc(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
     SDL_RenderClear(renderer);
     render_board(renderer);
+
+    int x = 0;
+    int y = 0;
+    
+    SDL_Rect chess_pos = {
+	(int) floorf(x * CELL_WIDTH),
+	(int) floorf(y * CELL_HEIGHT),
+	(int) floorf(CELL_WIDTH),
+	(int) floorf(CELL_HEIGHT),
+    };
+
+    SDL_RenderCopy(renderer, texture, NULL, &chess_pos);
+    
     SDL_RenderPresent(renderer);
   }
+
+  SDL_DestroyTexture(texture);
+  SDL_FreeSurface(image);
   
+  SDL_DestroyRenderer(renderer);
+  SDL_DestroyWindow(window);
+  
+  IMG_Quit();
   SDL_Quit();
 }
 

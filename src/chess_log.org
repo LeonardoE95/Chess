@@ -78,7 +78,7 @@ void render_board(SDL_Renderer *renderer) {
 }
    #+end_src
 
-** TODO Display pieces
+** DONE Display pieces
    [2021-11-27 sab 09:18]
 
    In the link shown previously I could download ~.svg~ assets. Then I
@@ -92,4 +92,89 @@ void render_board(SDL_Renderer *renderer) {
 
    1. First I conver the .svg downloaded assets into png.
 
+      https://stackoverflow.com/questions/9853325/how-to-convert-a-svg-to-a-png-with-imagemagick
+
+      #+begin_src sh
+inkscape -w 45 -h 45 black_king.svg -o output.png
+      #+end_src
+
    2. Then I import the png assets following the above linked guide.
+
+      https://gigi.nullneuron.net/gigilabs/loading-images-in-sdl2-with-sdl_image/
+
+   ------------------------
+   [2021-11-28 dom 08:52]
+
+   I managed to display some pieces, although the quality is not that
+   great. To do so I used the ~SDL_image~ library.
+
+   #+begin_src sh
+sudo pacman -S sdl2_image
+   #+end_src
+
+   and I added the SDL2_image to the pkg-config in the Makefile.
+
+   After that the changes to the code were pretty minimal:
+
+   - Imported the library
+
+     #+begin_src c
+#include <SDL2/SDL_image.h>
+     #+end_src
+
+   - Initialized it in ~main()~
+
+     #+begin_src c
+  // init image SDL
+  IMG_Init(IMG_INIT_PNG);
+
+  SDL_Surface *image = IMG_Load("../assets/black_king.svg");
+  SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, image);
+     #+end_src
+
+   - And then I can draw to the ~renderer~ as follows
+
+     #+begin_src c
+    int x = 0;
+    int y = 0;
+    
+    SDL_Rect chess_pos = {
+	(int) floorf(x * CELL_WIDTH),
+	(int) floorf(y * CELL_HEIGHT),
+	(int) floorf(CELL_WIDTH),
+	(int) floorf(CELL_HEIGHT),
+    };
+
+    SDL_RenderCopy(renderer, texture, NULL, &chess_pos);
+     #+end_src
+
+   - Once I'm done with the texture I cna destroy it with
+
+     #+begin_src c
+  SDL_DestroyTexture(texture);
+  SDL_FreeSurface(image);
+     #+end_src
+
+** TODO Improve assets/pieces quality
+   [2021-11-28 dom 08:54]
+
+   The quality of the ~png~ for the pieces is pretty shitty, need to
+   improve it somehow.
+
+   Maybe find better assets?
+
+** TODO Initialize board with correct pieces
+   [2021-11-28 dom 08:55]
+
+** TODO Handle logic of basic movement for each pieces
+   [2021-11-28 dom 08:56]
+
+   Need to understand if a given move is legal or not. This is based
+   on various information, such as:
+
+   - The type of pieces and the type of movement.
+
+   - If there are any collisions or not.
+
+** TODO Handle eating mechanics
+   [2021-11-28 dom 08:56]

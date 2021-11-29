@@ -112,24 +112,7 @@ void render_board(SDL_Renderer *renderer);
 void render_pos_highlight(SDL_Renderer *renderer, Pos p);
 
 // ----------------------------------------
-
 // GLOBAL VARIABLES
-
-const char *TYPE2PNG[] = {
-    [B_KING]    = "../assets/black_king.png",
-    [B_QUEEN]   = "../assets/black_queen.png",
-    [B_ROOK]    = "../assets/black_rook.png",
-    [B_BISHOP]  = "../assets/black_bishop.png",
-    [B_KNIGHT]  = "../assets/black_knight.png",
-    [B_PAWN]    = "../assets/black_pawn.png",
-    // ---------
-    [W_KING]    = "../assets/white_king.png",
-    [W_QUEEN]   = "../assets/white_queen.png",
-    [W_ROOK]    = "../assets/white_rook.png",
-    [W_BISHOP]  = "../assets/white_bishop.png",
-    [W_KNIGHT]  = "../assets/white_knight.png",
-    [W_PAWN]    = "../assets/white_pawn.png",      
-};
 
 const PieceType DEFAULT_BOARD[BOARD_HEIGHT][BOARD_WIDTH] = {
   {B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK},
@@ -188,6 +171,28 @@ void *img_p(void *ptr) {
 
 // ----------------------------------------
 
+const char *type2png(PieceType t) {
+  switch(t) {
+  case B_KING:   return "../assets/black_king.png";
+  case B_QUEEN:  return "../assets/black_queen.png";
+  case B_ROOK:   return "../assets/black_rook.png";
+  case B_BISHOP: return "../assets/black_bishop.png";
+  case B_KNIGHT: return "../assets/black_knight.png";
+  case B_PAWN:   return "../assets/black_pawn.png";
+  // ----------------
+  case W_KING:   return "../assets/white_king.png";
+  case W_QUEEN:  return "../assets/white_queen.png";
+  case W_ROOK:   return "../assets/white_rook.png";
+  case W_BISHOP: return "../assets/white_bishop.png";
+  case W_KNIGHT: return "../assets/white_knight.png";
+  case W_PAWN:   return "../assets/white_pawn.png";    
+    
+  default:
+    fprintf(stderr, "[ERROR] - default case in type2png\n");
+    return "";
+  }
+}
+
 void init_game(Game *game) {
   game->quit = 0;
 
@@ -222,7 +227,7 @@ Piece *init_piece(PieceType t, Pos init_pos) {
   Piece *p = calloc(1, sizeof(Piece));
   p->pos = init_pos;
   p->type = t;
-  p->image = img_p(IMG_Load(TYPE2PNG[t]));
+  p->image = img_p(IMG_Load(type2png(t)));
   
   return p;
 }

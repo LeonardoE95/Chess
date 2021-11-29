@@ -47,6 +47,50 @@
 
 
 void scc(int code) {
+// ----------------------------------------
+
+typedef enum {
+  B_KING = 0,
+  B_QUEEN,
+  B_ROOK,
+  B_BISHOP,
+  B_KNIGHT,
+  B_PAWN,
+
+  W_KING,
+  W_QUEEN,
+  W_ROOK,
+  W_BISHOP,
+  W_KNIGHT,
+  W_PAWN,
+
+  EMPTY,
+
+} PieceType;
+
+#define IS_BLACK(x) (x >= 0 && x <= 5)
+#define IS_WHITE(x) (x >= 6 && x <= 11)
+
+typedef struct {
+  int x;
+  int y;
+} Pos;
+
+typedef struct {
+  PieceType type;
+  Pos pos;
+
+  SDL_Surface *image;
+  SDL_Texture *texture;
+} Piece;
+
+typedef struct {
+  Piece *board[BOARD_WIDTH][BOARD_HEIGHT];
+  PieceType w_score[16];
+  PieceType b_score[16];
+  int quit;
+} Game;
+
   if (code < 0) {
     printf("SDL error: %s\n", SDL_GetError());
     exit(1);

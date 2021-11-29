@@ -166,6 +166,43 @@ void *img_p(void *ptr) {
 
 
 // ----------------------------------------
+// Used to istantiate a particular chess piece depending on its type.
+// NOTE: the texture instantiation is de-ferred to the first call of
+// render_piece().
+// NOTE: assume t != EMPTY (always)
+Piece *init_piece(PieceType t, Pos init_pos) {
+  assert(t != EMPTY && "Piece shouldn't be EMPTY!");
+  
+  Piece *p = calloc(1, sizeof(Piece));
+  p->pos = init_pos;
+  p->image = img_p(IMG_Load(TYPE2PNG[t]));
+  
+  return p;
+}
+
+void render_piece(SDL_Renderer *renderer, Piece *p) {
+  // was the piece already rendered?
+  if (!p->texture) {
+    p->texture = SDL_CreateTextureFromSurface(renderer, p->image);
+  }
+
+  
+  SDL_Rect chess_pos = {
+    (int) floorf(p->pos.x * CELL_WIDTH),
+    (int) floorf(p->pos.y * CELL_HEIGHT),
+    (int) floorf(CELL_WIDTH),
+    (int) floorf(CELL_HEIGHT),
+  };
+
+  SDL_RenderCopy(renderer, p->texture, NULL, &chess_pos);
+}
+
+void destroy_piece(Piece *p) {
+  SDL_DestroyTexture(p->texture);
+  SDL_FreeSurface(p->image);
+  free(p);
+}
+
 void render_board(SDL_Renderer *renderer) {
   int counter, col;
   int colors[] = {GRID_COLOR_1, GRID_COLOR_2};

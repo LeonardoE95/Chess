@@ -90,6 +90,41 @@ typedef struct {
   int quit;
 } Game;
 
+// ----------------------------------------
+
+// GLOBAL VARIABLES
+
+const char *TYPE2PNG[] = {
+    [B_KING]    = "../assets/black_king.png",
+    [B_QUEEN]   = "../assets/black_queen.png",
+    [B_ROOK]    = "../assets/black_rook.png",
+    [B_BISHOP]  = "../assets/black_bishop.png",
+    [B_KNIGHT]  = "../assets/black_knight.png",
+    [B_PAWN]    = "../assets/black_pawn.png",
+    // ---------
+    [W_KING]    = "../assets/white_king.png",
+    [W_QUEEN]   = "../assets/white_queen.png",
+    [W_ROOK]    = "../assets/white_rook.png",
+    [W_BISHOP]  = "../assets/white_bishop.png",
+    [W_KNIGHT]  = "../assets/white_knight.png",
+    [W_PAWN]    = "../assets/white_pawn.png",      
+};
+
+const PieceType DEFAULT_BOARD[BOARD_HEIGHT][BOARD_WIDTH] = {
+  {B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK},
+  {B_PAWN, B_PAWN  , B_PAWN  , B_PAWN , B_PAWN, B_PAWN  , B_PAWN  , B_PAWN},
+  
+  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
+  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
+  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
+  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
+  
+  {W_PAWN, W_PAWN  , W_PAWN  , W_PAWN , W_PAWN, W_PAWN  , W_PAWN  , W_PAWN},
+  {W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK},  
+};
+
+
+Game GAME = {0};
 
 // ----------------------------------------
 

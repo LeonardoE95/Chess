@@ -46,7 +46,6 @@
   ((hex) >> (0 * 8)) & 0xFF
 
 
-void scc(int code) {
 // ----------------------------------------
 
 typedef enum {
@@ -91,15 +90,19 @@ typedef struct {
   int quit;
 } Game;
 
+
+// ----------------------------------------
+
+void sdl2_c(int code) {
   if (code < 0) {
-    printf("SDL error: %s\n", SDL_GetError());
+    printf("[ERROR] - SDL error: %s\n", SDL_GetError());
     exit(1);
   }
 
   return;
 }
 
-void *scp(void *ptr) {
+void *sdl2_p(void *ptr) {
   if (!ptr) {
     fprintf(stderr, "[ERROR] - SDL_ERROR: %s", SDL_GetError());
     exit(1);
@@ -108,6 +111,26 @@ void *scp(void *ptr) {
   return ptr;
 }
 
+void img_c(int code) {
+  if (code < 0) {
+    printf("[ERROR] - IMG error: %s\n", IMG_GetError());
+    exit(1);
+  }
+
+  return;
+}
+
+void *img_p(void *ptr) {
+  if (!ptr) {
+    fprintf(stderr, "[ERROR] - IMG_ERROR: %s", IMG_GetError());
+    exit(1);
+  }
+
+  return ptr;
+}
+
+
+// ----------------------------------------
 void render_board(SDL_Renderer *renderer) {
   int counter, col;
   int colors[] = {GRID_COLOR_1, GRID_COLOR_2};

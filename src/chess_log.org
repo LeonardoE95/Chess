@@ -348,6 +348,13 @@ void render_pieces(SDL_Renderer *renderer, Game *game) {
 
    - If there are any collisions or not.
 
+   ----------------------
+   [2021-11-29 lun 08:55]
+
+   I started to implement some functions to deal with basic movement.
+
+   Still need to handle all the things related to collision however.
+
 ** TODO Handle eating mechanics
    [2021-11-28 dom 08:56]
 
@@ -357,3 +364,10 @@ void render_pieces(SDL_Renderer *renderer, Game *game) {
    The basic problem is that by default SDL2 appears to have some
    memory leaks, thus with ~Valgrind~ I'm having a bit of an hard time
    understanding if I did any mistakes.
+
+** TODO Learn little highlight on selected piece
+   [2021-11-29 lun 07:10]
+
+   At each time in the game a piece can be selected by the player. We
+   have to somehow indicate that, maybe by drawing a little square on
+   the side of the position on which the piece resides.

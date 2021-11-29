@@ -166,6 +166,31 @@ void *img_p(void *ptr) {
 
 
 // ----------------------------------------
+
+void init_game(Game *game) {
+  game->quit = 0;
+
+  for (int x = 0; x < BOARD_WIDTH; x++) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      // NOTE: have to swap coordinates of default board to accomodate
+      // SDL2 coordinate scheme
+      PieceType t = DEFAULT_BOARD[y][x];
+      game->board[x][y] = t != EMPTY ? init_piece(t, (Pos){x, y}) : NULL;
+    }
+  }
+}
+
+void destroy_game(Game *game) {
+  for (int x = 0; x < BOARD_WIDTH; x++) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      if (game->board[x][y]) {
+	destroy_piece(game->board[x][y]);
+      }
+    }
+  }  
+}
+
+
 // Used to istantiate a particular chess piece depending on its type.
 // NOTE: the texture instantiation is de-ferred to the first call of
 // render_piece().
@@ -203,6 +228,13 @@ void destroy_piece(Piece *p) {
   free(p);
 }
 
+// ----------------------------------------
+
+void render_game(SDL_Renderer *renderer, Game *game) {
+  render_board(renderer);
+  render_pieces(renderer, game);
+}
+
 void render_board(SDL_Renderer *renderer) {
   int counter, col;
   int colors[] = {GRID_COLOR_1, GRID_COLOR_2};
@@ -226,6 +258,16 @@ void render_board(SDL_Renderer *renderer) {
     }
   }
   
+}
+
+void render_pieces(SDL_Renderer *renderer, Game *game) {
+  for (int x = 0; x < BOARD_WIDTH; x++) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      if (game->board[x][y]) {
+	render_piece(renderer, game->board[x][y]);
+      }
+    }
+  }
 }
 
 // ----------------------------------------

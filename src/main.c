@@ -259,7 +259,7 @@ void render_board(SDL_Renderer *renderer) {
     counter = x % 2;
     for (int y = 0; y < BOARD_HEIGHT; y++) {
       col = colors[counter];
-      scc(SDL_SetRenderDrawColor(renderer, HEX_COLOR(col)));
+      sdl2_c(SDL_SetRenderDrawColor(renderer, HEX_COLOR(col)));
 
       SDL_Rect rect = {
 	(int) floorf(x * CELL_WIDTH),
@@ -268,12 +268,11 @@ void render_board(SDL_Renderer *renderer) {
 	(int) floorf(CELL_HEIGHT),
       };
 
-      scc(SDL_RenderFillRect(renderer, &rect));
+      sdl2_c(SDL_RenderFillRect(renderer, &rect));
 
       counter = (counter + 1) % 2;
     }
   }
-  
 }
 
 void render_pieces(SDL_Renderer *renderer, Game *game) {
@@ -291,48 +290,30 @@ void render_pieces(SDL_Renderer *renderer, Game *game) {
 int main(void) {
   // init classic SDL
   SDL_Init(SDL_INIT_VIDEO);
-  SDL_Window *const window = scp(SDL_CreateWindow("Description", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE));  
-  SDL_Renderer *const renderer = scp(SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED));
+  SDL_Window *const window = sdl2_p(SDL_CreateWindow("Description", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE));  
+  SDL_Renderer *const renderer = sdl2_p(SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED));
 
   // init image SDL
   IMG_Init(IMG_INIT_PNG);
+  init_game(&GAME);
 
-  SDL_Surface *image = IMG_Load("../assets/black_king.svg");
-  SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, image);
-  
-  int quit = 0;
-  
-  while(!quit) {
+  while(!GAME.quit) {
     SDL_Event event;
 
     // event handling
     while(SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
-	quit = 1;
+	GAME.quit = 1;
       }
     }
 
-    scc(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
+    sdl2_c(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
     SDL_RenderClear(renderer);
-    render_board(renderer);
-
-    int x = 0;
-    int y = 0;
-    
-    SDL_Rect chess_pos = {
-	(int) floorf(x * CELL_WIDTH),
-	(int) floorf(y * CELL_HEIGHT),
-	(int) floorf(CELL_WIDTH),
-	(int) floorf(CELL_HEIGHT),
-    };
-
-    SDL_RenderCopy(renderer, texture, NULL, &chess_pos);
-    
+    render_game(renderer, &GAME);
     SDL_RenderPresent(renderer);
   }
 
-  SDL_DestroyTexture(texture);
-  SDL_FreeSurface(image);
+  destroy_game(&GAME);
   
   SDL_DestroyRenderer(renderer);
   SDL_DestroyWindow(window);

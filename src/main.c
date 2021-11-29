@@ -15,6 +15,7 @@
 
 
 #include <stdio.h>
+#include <assert.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
@@ -89,6 +90,21 @@ typedef struct {
   PieceType b_score[16];
   int quit;
 } Game;
+
+void sdl2_c(int code);
+void *sdl2_p(void *ptr);
+void img_c(int code);
+void *img_p(void *ptr);
+
+void init_game(Game *game);
+Piece *init_piece(PieceType t, Pos init_pos);
+
+void destroy_piece(Piece *p);
+
+void render_game(SDL_Renderer *renderer, Game *game);
+void render_pieces(SDL_Renderer *renderer, Game *game);
+void render_piece(SDL_Renderer *renderer, Piece *p);
+void render_board(SDL_Renderer *renderer);
 
 // ----------------------------------------
 

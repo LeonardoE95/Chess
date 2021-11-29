@@ -70,9 +70,6 @@ typedef enum {
 
 } PieceType;
 
-#define IS_BLACK(x) (x >= 0 && x <= 5)
-#define IS_WHITE(x) (x >= 6 && x <= 11)
-
 typedef struct {
   int x;
   int y;
@@ -87,23 +84,46 @@ typedef struct {
 } Piece;
 
 typedef struct {
+  PieceType score[16];
+  int score_count;
+} Player;
+
+typedef struct {
   Piece *board[BOARD_WIDTH][BOARD_HEIGHT];
-  PieceType w_score[16];
-  PieceType b_score[16];
+
+  Player b_player;
+  Player w_player;
 
   Piece *selected_piece;
+  Player *selected_player;
+  
   int quit;
 } Game;
+
+#define IS_PIECE_BLACK(x) (x >= 0 && x <= 5)
+#define IS_PIECE_WHITE(x) (x >= 6 && x <= 11)
+
+#define IS_PLAYER_BLACK(g) (g->selected_player == &g->b_player)
+#define IS_PLAYER_WHITE(g) (g->selected_player == &g->w_player)
+
+#define SAME_TYPE(p1, p2) ((IS_PIECE_BLACK(p1->type) && IS_PIECE_BLACK(p2->type)) || (IS_PIECE_WHITE(p1->type) && IS_PIECE_WHITE(p2->type)))
 
 void sdl2_c(int code);
 void *sdl2_p(void *ptr);
 void img_c(int code);
 void *img_p(void *ptr);
 
+const char *type2png(PieceType t);
 void init_game(Game *game);
+void destroy_game(Game *game);
 Piece *init_piece(PieceType t, Pos init_pos);
-
+void update_selected_piece(Game *game, Pos p);
 void destroy_piece(Piece *p);
+
+int check_move(Game *game, Piece *p, Pos new_pos);
+void move_piece(Game *game, Piece *p, Pos new_pos);
+
+void update_player_score(Player *p, PieceType t);
 
 void render_game(SDL_Renderer *renderer, Game *game);
 void render_pieces(SDL_Renderer *renderer, Game *game);
@@ -126,7 +146,6 @@ const PieceType DEFAULT_BOARD[BOARD_HEIGHT][BOARD_WIDTH] = {
   {W_PAWN, W_PAWN  , W_PAWN  , W_PAWN , W_PAWN, W_PAWN  , W_PAWN  , W_PAWN},
   {W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK},  
 };
-
 
 Game GAME = {0};
 
@@ -196,14 +215,18 @@ const char *type2png(PieceType t) {
 void init_game(Game *game) {
   game->quit = 0;
 
+  // init board logical state
   for (int x = 0; x < BOARD_WIDTH; x++) {
     for (int y = 0; y < BOARD_HEIGHT; y++) {
-      // NOTE: have to swap coordinates of default board to accomodate
-      // SDL2 coordinate scheme
+      // NOTE: swap coords to follow SDL2 coord scheme
       PieceType t = DEFAULT_BOARD[y][x];
       game->board[x][y] = t != EMPTY ? init_piece(t, (Pos){x, y}) : NULL;
     }
   }
+
+  // NOTE: we assume black starts
+  game->selected_player= &game->b_player;
+  
 }
 
 void destroy_game(Game *game) {
@@ -215,7 +238,6 @@ void destroy_game(Game *game) {
     }
   }  
 }
-
 
 // Used to istantiate a particular chess piece depending on its type.
 // NOTE: the texture instantiation is de-ferred to the first call of
@@ -239,7 +261,19 @@ void destroy_piece(Piece *p) {
 }
 
 void update_selected_piece(Game *game, Pos p) {
-  game->selected_piece = game->board[p.x][p.y];
+  // we only update the selected piece if the player is trying to pick
+  // his/her own pieces, and not the enemies's.
+  Piece *piece = game->board[p.x][p.y];
+  
+  if (piece) {
+    if ((IS_PIECE_BLACK(piece->type) && IS_PLAYER_BLACK(game)) || (IS_PIECE_WHITE(piece->type) && IS_PLAYER_WHITE(game))) {
+      game->selected_piece = piece;
+    } else {
+      game->selected_piece = NULL;
+    }
+  }
+
+  return;
 }
 
 int check_move(Game *game, Piece *p, Pos new_pos) {
@@ -251,25 +285,30 @@ int check_move(Game *game, Piece *p, Pos new_pos) {
   int dx = new_pos.x - old_pos.x;
   int dy = new_pos.y - old_pos.y;
 
+  Piece *eating_piece = game->board[new_pos.x][new_pos.y];
+
   switch(p->type) {
   case B_PAWN:
 
     // at the start the pawn can choose to move two squares below.
     if (old_pos.y == 1 && dy == 2 && dx == 0) {
-      // TODO: check for collision/out of board positions
-      valid = 1;
+      if (!eating_piece) {
+	valid = 1; 
+      }
     }
     
     // in general however it can only move one square below.
     else if (dy == 1 && dx == 0) {
-      // TODO: check for collision/out of board positions
-      valid = 1; 
+      if (!eating_piece) {
+	valid = 1; 
+      }
     }
 
     // unless its trying to eat some piece using the diagonals.
-    else if (1) { 
-      // TODO: implement this case
-      // TODO: check for collision/out of board positions
+    else if (dy == 1 && abs(dx) == 1) {
+      if (eating_piece) {
+	valid = 1;
+      }
     }
     
     break;
@@ -278,19 +317,23 @@ int check_move(Game *game, Piece *p, Pos new_pos) {
 
     // at the start the pawn can choose to move two squares below.
     if (old_pos.y == 6 && dy == -2 && dx == 0) {
-      // TODO: check for collision/out of board positions
-      valid = 1;
+      if (!eating_piece) {
+	valid = 1; 
+      }      
     }
     
     // in general however it can only move one square below.
     else if (dy == -1 && dx == 0) {
-      // TODO: check for collision/out of board positions
-      valid = 1;
+      if (!eating_piece) {
+	valid = 1; 
+      }            
     }
 
     // unless its trying to eat some piece using the diagonals.
-    else if (1) { 
-      // TODO: implement this case
+    else if (dy == -1 && abs(dx) == 1) {
+      if (eating_piece) {
+	valid = 1;
+      }      
     }
     
     break;
@@ -298,7 +341,31 @@ int check_move(Game *game, Piece *p, Pos new_pos) {
 
   case B_ROOK:
   case W_ROOK:
-    if (dy == 0 || dx == 0) {
+    // TODO: this can be definitely abstracted over.
+    if (!dx) {
+      valid = 1;
+      
+      // collision check
+      if (dy < 0) {
+	// we're moving up, from higher coords to lower coords
+	for (int y = old_pos.y - 1; y > new_pos.y; y--) {
+	  if(game->board[new_pos.x][y]) {
+	    valid = 0;
+	  }
+	}
+      }
+
+      else if(dy > 0) {
+	// we're moving down, from lower coords to higher coords
+	for (int y = old_pos.y + 1; y < new_pos.y; y++) {
+	  if(game->board[new_pos.x][y]) {
+	    valid = 0;
+	  }
+	}
+      }
+    }
+
+    else if (!dy) {
       valid = 1;
     }
     
@@ -314,17 +381,22 @@ int check_move(Game *game, Piece *p, Pos new_pos) {
 
   case B_KNIGHT:
   case W_KNIGHT:
+    // TODO: implement this
     break;
 
   case B_QUEEN:
   case W_QUEEN:
+    // TODO: implement this
     break;
 
   case B_KING:
   case W_KING:
+    // TODO: implement this
     break;
 
   case EMPTY:
+    fprintf(stderr, "[ERROR] - EMPTY clause in check move!\n");
+    exit(1);
     break;
 
   default:
@@ -341,17 +413,24 @@ void move_piece(Game *game, Piece *p, Pos new_pos) {
     return;
   }
   
-  printf("valid move :D!\n");
-
-  // are we eating something?
+  // The move is valid, do it.
   if(game->board[new_pos.x][new_pos.y]) {
-    // TODO: handle this case
-  } else {
-    game->board[p->pos.x][p->pos.y] = NULL;
-    game->board[new_pos.x][new_pos.y] = p;
-    p->pos = new_pos;
+    Piece *eaten_piece = game->board[new_pos.x][new_pos.y];
+    update_player_score(game->selected_player, eaten_piece->type);
+    destroy_piece(eaten_piece);
   }
   
+  game->board[p->pos.x][p->pos.y] = NULL;
+  game->board[new_pos.x][new_pos.y] = p;
+  p->pos = new_pos;
+
+  game->selected_piece= NULL;
+  game->selected_player= IS_PLAYER_WHITE(game) ? &game->b_player : &game->w_player;
+}
+
+void update_player_score(Player *p, PieceType t) {
+  assert(p->score_count < 16 && "score count must be < 16!\n");
+  p->score[p->score_count++] = t;
 }
 
 // ----------------------------------------
@@ -460,7 +539,10 @@ void render_pieces(SDL_Renderer *renderer, Game *game) {
 int main(void) {  
   // init classic SDL
   SDL_Init(SDL_INIT_VIDEO);
-  SDL_Window *const window = sdl2_p(SDL_CreateWindow("Description", 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_RESIZABLE));  
+  SDL_Window *const window = sdl2_p(SDL_CreateWindow("Description", 0, 0,
+						     SCREEN_WIDTH, SCREEN_HEIGHT,
+						     SDL_WINDOW_RESIZABLE));
+  
   SDL_Renderer *const renderer = sdl2_p(SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED));
 
   // init image SDL
@@ -470,32 +552,31 @@ int main(void) {
   while(!GAME.quit) {
     SDL_Event event;
 
-    // event handling
+    // --------------------
+    // start event handling
     while(SDL_PollEvent(&event)) {
       if (event.type == SDL_QUIT) {
 	GAME.quit = 1;
       }
 
       if (event.type == SDL_MOUSEBUTTONDOWN) {
-	Pos pos = (Pos){
+	// handle player selection
+	Pos new_pos = (Pos){
 	  (int) floorf(event.button.x / CELL_WIDTH),
 	  floorf(event.button.y / CELL_HEIGHT)
 	};
 
-	// has the player started a movement?
-	if (!GAME.selected_piece) {
-	  update_selected_piece(&GAME, pos);
-	  printf("[INFO] - Player has picked piece at position: (%d, %d)\n", pos.x, pos.y);
+	Piece *p = GAME.board[new_pos.x][new_pos.y];
+	if (!GAME.selected_piece || (p && SAME_TYPE(p, GAME.selected_piece))) {
+	  update_selected_piece(&GAME, new_pos);
 	} else {
-	  Piece *p = GAME.selected_piece;
-	  printf("[INFO] - Player wants to move piece %d from pos: (%d, %d) to pos (%d, %d)\n", p->type, p->pos.x, p->pos.y, pos.x, pos.y);
-	  move_piece(&GAME, p, pos);
-	  GAME.selected_piece = NULL;
+	  move_piece(&GAME, GAME.selected_piece, new_pos);
 	}
       }
-      
     }
+    // --------------------
 
+    // render next frame
     sdl2_c(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
     SDL_RenderClear(renderer);
     render_game(renderer, &GAME);
@@ -510,4 +591,3 @@ int main(void) {
   IMG_Quit();
   SDL_Quit();
 }
-

@@ -34,8 +34,9 @@
 // R: 238, G: 238, B: 213 | Hex: #EEEED5o
 
 // RGBA, Red Green Blue Alpha
-#define GRID_COLOR_1 0xEEEED500
-#define GRID_COLOR_2 0x7D945D00
+#define GRID_COLOR_1     0xEEEED500
+#define GRID_COLOR_2     0x7D945D00
+#define HIGHLIGHT_COLOR  0xEE72F100
 
 
 // Tsoding
@@ -108,6 +109,7 @@ void render_game(SDL_Renderer *renderer, Game *game);
 void render_pieces(SDL_Renderer *renderer, Game *game);
 void render_piece(SDL_Renderer *renderer, Piece *p, int selected);
 void render_board(SDL_Renderer *renderer);
+void render_pos_highlight(SDL_Renderer *renderer, Pos p);
 
 // ----------------------------------------
 
@@ -394,10 +396,46 @@ void render_piece(SDL_Renderer *renderer, Piece *p, int selected) {
   SDL_RenderCopy(renderer, p->texture, NULL, &chess_pos);
   
   if (selected) {
-    // TODO: if the piece was selected we also have to indicate it
-    // somehow.
+    render_pos_highlight(renderer, p->pos);
   }
-  
+}
+
+void render_pos_highlight(SDL_Renderer *renderer, Pos pos) {
+  sdl2_c(SDL_SetRenderDrawColor(renderer, HEX_COLOR(HIGHLIGHT_COLOR)));
+    
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT));
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + 1),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + 1));
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + 2),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + 2));
+
+  // ---------
+
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT),
+		     floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + 1), floorf(pos.y * CELL_HEIGHT),
+		     floorf(pos.x * CELL_WIDTH + 1), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + 2), floorf(pos.y * CELL_HEIGHT),
+		     floorf(pos.x * CELL_WIDTH + 2), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
+
+  // ---------
+
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT - 1),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT - 1));
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT - 2),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT - 2));
+
+  // ---------
+
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + CELL_WIDTH - 1), floorf(pos.y * CELL_HEIGHT),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH - 1), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
+  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + CELL_WIDTH - 2), floorf(pos.y * CELL_HEIGHT),
+		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH - 2), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));        
 }
 
 

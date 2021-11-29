@@ -163,9 +163,181 @@ sudo pacman -S sdl2_image
 
    Maybe find better assets?
 
-** TODO Initialize board with correct pieces
+** DONE Initialize board with correct pieces
    [2021-11-28 dom 08:55]
 
+   Written all the code for initialization and basic rendering.
+
+   I've pretty much handled it like this:
+
+   - I have an enum to discriminate between the different pieces
+
+     #+begin_src c
+typedef enum {
+  B_KING = 0,
+  B_QUEEN,
+  B_ROOK,
+  B_BISHOP,
+  B_KNIGHT,
+  B_PAWN,
+
+  W_KING,
+  W_QUEEN,
+  W_ROOK,
+  W_BISHOP,
+  W_KNIGHT,
+  W_PAWN,
+
+  EMPTY,
+
+} PieceType;
+     #+end_src
+
+   - Each piece is a struct with some info, like the position, what
+     type of piece it is, and stuff regarding to rendering.
+
+     #+begin_src c
+typedef struct {
+  PieceType type;
+  Pos pos;
+
+  SDL_Surface *image;
+  SDL_Texture *texture;
+} Piece;
+     #+end_src
+
+   - The game, for now, has a bunch of arrays.
+
+     #+begin_src c
+typedef struct {
+  Piece *board[BOARD_WIDTH][BOARD_HEIGHT];
+  PieceType w_score[16];
+  PieceType b_score[16];
+  int quit;
+} Game;
+     #+end_src
+
+   As far as the initialization of the pieces is concerned, I have
+   created two look-up tables which I use:
+
+   1. One to map the piece type to the ~.png~ asset which represents
+      that type.
+
+      #+begin_src c
+const char *TYPE2PNG[] = {
+    [B_KING]    = "../assets/black_king.png",
+    [B_QUEEN]   = "../assets/black_queen.png",
+    [B_ROOK]    = "../assets/black_rook.png",
+    [B_BISHOP]  = "../assets/black_bishop.png",
+    [B_KNIGHT]  = "../assets/black_knight.png",
+    [B_PAWN]    = "../assets/black_pawn.png",
+    // ---------
+    [W_KING]    = "../assets/white_king.png",
+    [W_QUEEN]   = "../assets/white_queen.png",
+    [W_ROOK]    = "../assets/white_rook.png",
+    [W_BISHOP]  = "../assets/white_bishop.png",
+    [W_KNIGHT]  = "../assets/white_knight.png",
+    [W_PAWN]    = "../assets/white_pawn.png",      
+};
+      #+end_src
+
+   2. The other to define the initial layout of the board.
+
+      #+begin_src c
+const PieceType DEFAULT_BOARD[BOARD_HEIGHT][BOARD_WIDTH] = {
+  {B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK},
+  {B_PAWN, B_PAWN  , B_PAWN  , B_PAWN , B_PAWN, B_PAWN  , B_PAWN  , B_PAWN},
+  
+  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
+  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
+  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
+  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
+  
+  {W_PAWN, W_PAWN  , W_PAWN  , W_PAWN , W_PAWN, W_PAWN  , W_PAWN  , W_PAWN},
+  {W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK},  
+};
+      #+end_src
+
+   -----------------------------------
+
+   With all of these data structures in place the initialization of the board
+   is pretty smooth
+
+   #+begin_src c
+void init_game(Game *game) {
+  game->quit = 0;
+
+  for (int x = 0; x < BOARD_WIDTH; x++) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      // NOTE: have to swap coordinates of default board to accomodate
+      // SDL2 coordinate scheme
+      PieceType t = DEFAULT_BOARD[y][x];
+      game->board[x][y] = t != EMPTY ? init_piece(t, (Pos){x, y}) : NULL;
+    }
+  }
+}
+   #+end_src
+
+   while the initialization of the single pieces goes as follows
+
+   #+begin_src c
+// Used to istantiate a particular chess piece depending on its type.
+// NOTE: the texture instantiation is de-ferred to the first call of
+// render_piece().
+// NOTE: assume t != EMPTY (always)
+Piece *init_piece(PieceType t, Pos init_pos) {
+  assert(t != EMPTY && "Piece shouldn't be EMPTY!");
+  
+  Piece *p = calloc(1, sizeof(Piece));
+  p->pos = init_pos;
+  p->image = img_p(IMG_Load(TYPE2PNG[t]));
+  
+  return p;
+}
+   #+end_src
+
+   -----------------------------------
+
+   Finally, the rendering is also pretty smooth
+
+   #+begin_src c
+void render_game(SDL_Renderer *renderer, Game *game) {
+  render_board(renderer);
+  render_pieces(renderer, game);
+}
+   #+end_src
+
+   #+begin_src c
+void render_piece(SDL_Renderer *renderer, Piece *p) {
+  // was the piece already rendered?
+  if (!p->texture) {
+    p->texture = SDL_CreateTextureFromSurface(renderer, p->image);
+  }
+
+  
+  SDL_Rect chess_pos = {
+    (int) floorf(p->pos.x * CELL_WIDTH),
+    (int) floorf(p->pos.y * CELL_HEIGHT),
+    (int) floorf(CELL_WIDTH),
+    (int) floorf(CELL_HEIGHT),
+  };
+
+  SDL_RenderCopy(renderer, p->texture, NULL, &chess_pos);
+}
+   #+end_src
+
+   #+begin_src c
+void render_pieces(SDL_Renderer *renderer, Game *game) {
+  for (int x = 0; x < BOARD_WIDTH; x++) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      if (game->board[x][y]) {
+	render_piece(renderer, game->board[x][y]);
+      }
+    }
+  }
+}
+   #+end_src
+   
 ** TODO Handle logic of basic movement for each pieces
    [2021-11-28 dom 08:56]
 
@@ -178,3 +350,10 @@ sudo pacman -S sdl2_image
 
 ** TODO Handle eating mechanics
    [2021-11-28 dom 08:56]
+
+** TODO Learn how to check memory leaks with valgrind
+   [2021-11-29 lun 06:41]
+
+   The basic problem is that by default SDL2 appears to have some
+   memory leaks, thus with ~Valgrind~ I'm having a bit of an hard time
+   understanding if I did any mistakes.

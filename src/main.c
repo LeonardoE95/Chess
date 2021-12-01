@@ -13,7 +13,6 @@
 
  */
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -29,11 +28,15 @@
 #define CELL_WIDTH ((SCREEN_WIDTH / BOARD_WIDTH))
 #define CELL_HEIGHT ((SCREEN_HEIGHT / BOARD_HEIGHT))
 
+#define B_PLAYER_NAME "BLACK"
+#define W_PLAYER_NAME "WHITE"
+
 // ----------------------------------------
 // R: 125, G: 148, B:  93 | Hex: #7D945D
 // R: 238, G: 238, B: 213 | Hex: #EEEED5o
 
 // RGBA, Red Green Blue Alpha
+#define BLACK            0x000000FF
 #define GRID_COLOR_1     0xEEEED500
 #define GRID_COLOR_2     0x7D945D00
 #define HIGHLIGHT_COLOR  0xEE72F100
@@ -98,6 +101,7 @@ typedef struct {
 typedef struct {
   PieceType score[16];
   int score_count;
+  char *player_name;
 } Player;
 
 typedef struct {
@@ -134,14 +138,15 @@ void update_selected_piece(Game *game, Pos p);
 void destroy_piece(Piece *p);
 
 int check_move_validity(Game *game, Piece *p, Pos new_pos);
-void move_piece(Game *game, Piece *p, Pos new_pos);
+int move_piece(Game *game, Piece *p, Pos new_pos);
 Dir compute_movement_dir(Pos start_pos, Pos end_pos);
 int check_obstacles_in_path(Game *game, Pos start_pos, Pos end_pos, Dir dir);
 
 void update_player_score(Player *p, PieceType t);
 
-void render_game(SDL_Renderer *renderer, Game *game);
-void render_pieces(SDL_Renderer *renderer, Game *game);
+void render_game(SDL_Renderer *renderer, const Game *game);
+void render_board(SDL_Renderer *renderer);
+void render_pieces(SDL_Renderer *renderer, const Game *game);
 void render_piece(SDL_Renderer *renderer, Piece *p, int selected);
 void render_board(SDL_Renderer *renderer);
 void render_pos_highlight(SDL_Renderer *renderer, Pos p);
@@ -150,16 +155,16 @@ void render_pos_highlight(SDL_Renderer *renderer, Pos p);
 // GLOBAL VARIABLES
 
 const PieceType DEFAULT_BOARD[BOARD_HEIGHT][BOARD_WIDTH] = {
-  {B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK},
-  {B_PAWN, B_PAWN  , B_PAWN  , B_PAWN , B_PAWN, B_PAWN  , B_PAWN  , B_PAWN},
-  
-  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
-  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
-  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
-  {EMPTY , EMPTY   , EMPTY   , EMPTY  , EMPTY , EMPTY   , EMPTY   , EMPTY},
-  
-  {W_PAWN, W_PAWN  , W_PAWN  , W_PAWN , W_PAWN, W_PAWN  , W_PAWN  , W_PAWN},
-  {W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK},  
+    {B_ROOK, B_KNIGHT, B_BISHOP, B_QUEEN, B_KING, B_BISHOP, B_KNIGHT, B_ROOK},
+    {B_PAWN, B_PAWN, B_PAWN, B_PAWN, B_PAWN, B_PAWN, B_PAWN, B_PAWN},
+
+    {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
+    {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
+    {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
+    {EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY},
+
+    {W_PAWN, W_PAWN, W_PAWN, W_PAWN, W_PAWN, W_PAWN, W_PAWN, W_PAWN},
+    {W_ROOK, W_KNIGHT, W_BISHOP, W_QUEEN, W_KING, W_BISHOP, W_KNIGHT, W_ROOK},
 };
 
 Game GAME = {0};
@@ -239,6 +244,9 @@ void init_game(Game *game) {
     }
   }
 
+  game->b_player.player_name = B_PLAYER_NAME;
+  game->w_player.player_name = W_PLAYER_NAME;
+  
   // NOTE: we assume black starts
   game->selected_player= &game->b_player;
   
@@ -316,7 +324,6 @@ int check_move_validity(Game *game, Piece *p, Pos new_pos) {
   // returns 1 if the piece p can move from its current position to
   // new_pos, 0 otherwise.
   Pos old_pos = p->pos;
-  int valid = 0;
   Piece *eating_piece = game->board[new_pos.x][new_pos.y];
   Dir movement_dir = compute_movement_dir(p->pos, new_pos);
 
@@ -330,11 +337,11 @@ int check_move_validity(Game *game, Piece *p, Pos new_pos) {
   case B_PAWN:
     if (!eating_piece &&
 	((old_pos.y == 1 && dy == 2 && dx == 0) || (dy == 1 && dx == 0))) {
-      valid = 1;
+      return 1;
     }
 
     else if (eating_piece && dy == 1 && abs(dx) == 1) {
-      valid = 1;
+      return 1;
     }
     
     break;
@@ -342,11 +349,11 @@ int check_move_validity(Game *game, Piece *p, Pos new_pos) {
   case W_PAWN:
     if (!eating_piece &&
 	((old_pos.y == 6 && dy == -2 && dx == 0) || (dy == -1 && dx == 0))) {
-      valid = 1;
+      return 1;
     }
 
     else if (eating_piece && dy == -1 && abs(dx) == 1) {
-      valid = 1;
+      return 1;
     }    
     
     break;
@@ -374,19 +381,32 @@ int check_move_validity(Game *game, Piece *p, Pos new_pos) {
   // -----------
   case B_KNIGHT:
   case W_KNIGHT:
-    // TODO: implement this
+    // NOTE: here we don't have to check for obstacles.
+    if ((dy == -2 && (dx == -1 || dx == 1)) || (dy == 2 && (dx == -1 || dx == 1))  ||
+	(dx == -2 && (dy == -1 || dy == 1)) || (dx == 2 && (dy == -1 || dy == 1))) {
+      return 1;
+    }
+    
     break;
 
   // -----------
   case B_QUEEN:
   case W_QUEEN:
-    // TODO: implement this
+    
+    if ((abs(dx) == abs(dy)) || (dy && !dx) || (!dy && dx)) {
+      return check_obstacles_in_path(game, p->pos, new_pos, movement_dir);
+    }
+
     break;
 
   // -----------
   case B_KING:
   case W_KING:
-    // TODO: implement this
+
+    if ((dy == 0 || dy == 1 || dy == -1) && (dx == 0 || dx == 1 || dx == -1)) {
+      return 1;
+    }
+    
     break;
 
   default:
@@ -394,8 +414,8 @@ int check_move_validity(Game *game, Piece *p, Pos new_pos) {
     exit(1);
     break;
   }
-  
-  return valid;
+
+  return 0;
 }
 
 // This function should return 1 if the path is 'free of obstacles',
@@ -499,15 +519,21 @@ int check_obstacles_in_path(Game *game, Pos start_pos, Pos end_pos, Dir dir) {
   return 1;
 }
 
-void move_piece(Game *game, Piece *p, Pos new_pos) {
+int move_piece(Game *game, Piece *p, Pos new_pos) {
+  int finished = 0;
+  
   if(!check_move_validity(&GAME, p, new_pos)) {
-    return;
+    return finished;
   }
   
   // The move is valid, do it.
   if(game->board[new_pos.x][new_pos.y]) {
     Piece *eaten_piece = game->board[new_pos.x][new_pos.y];
     update_player_score(game->selected_player, eaten_piece->type);
+
+    // check if game is over.
+    finished = eaten_piece->type == B_KING || eaten_piece->type == W_KING;
+    
     destroy_piece(eaten_piece);
   }
   
@@ -515,8 +541,14 @@ void move_piece(Game *game, Piece *p, Pos new_pos) {
   game->board[new_pos.x][new_pos.y] = p;
   p->pos = new_pos;
 
-  game->selected_piece= NULL;
-  game->selected_player= IS_PLAYER_WHITE(game) ? &game->b_player : &game->w_player;
+  game->selected_piece = NULL;
+
+  if (!finished) {
+    // only change player if game is over
+    game->selected_player = IS_PLAYER_WHITE(game) ? &game->b_player : &game->w_player;
+  }
+
+  return finished;
 }
 
 void update_player_score(Player *p, PieceType t) {
@@ -526,9 +558,15 @@ void update_player_score(Player *p, PieceType t) {
 
 // ----------------------------------------
 
-void render_game(SDL_Renderer *renderer, Game *game) {
+void render_game(SDL_Renderer *renderer, const Game *game) {
+  sdl2_c(SDL_SetRenderDrawColor(renderer, HEX_COLOR(BLACK)));
+  
+  SDL_RenderClear(renderer);
+  
   render_board(renderer);
   render_pieces(renderer, game);
+
+  SDL_RenderPresent(renderer);  
 }
 
 void render_board(SDL_Renderer *renderer) {
@@ -633,7 +671,7 @@ void render_pos_highlight(SDL_Renderer *renderer, Pos pos) {
 }
 
 
-void render_pieces(SDL_Renderer *renderer, Game *game) {
+void render_pieces(SDL_Renderer *renderer, const Game *game) {
   for (int x = 0; x < BOARD_WIDTH; x++) {
     for (int y = 0; y < BOARD_HEIGHT; y++) {
       if (game->board[x][y]) {
@@ -670,7 +708,7 @@ int main(void) {
       }
 
       if (event.type == SDL_MOUSEBUTTONDOWN) {
-	// handle player selection
+	// handle piece selection
 	Pos new_pos = (Pos){
 	  (int) floorf(event.button.x / CELL_WIDTH),
 	  floorf(event.button.y / CELL_HEIGHT)
@@ -680,17 +718,20 @@ int main(void) {
 	if (!GAME.selected_piece || (p && SAME_TYPE(p, GAME.selected_piece))) {
 	  update_selected_piece(&GAME, new_pos);
 	} else {
-	  move_piece(&GAME, GAME.selected_piece, new_pos);
+	  int finished = move_piece(&GAME, GAME.selected_piece, new_pos);
+
+	  if (finished) {
+	    printf("Game is over: Player %s won!\n", GAME.selected_player->player_name);
+	    printf("Resetting ...\n\n");
+	    destroy_game(&GAME);
+	    init_game(&GAME);
+	  }
 	}
       }
     }
-    // --------------------
 
     // render next frame
-    sdl2_c(SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255));
-    SDL_RenderClear(renderer);
     render_game(renderer, &GAME);
-    SDL_RenderPresent(renderer);
   }
 
   destroy_game(&GAME);

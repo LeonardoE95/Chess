@@ -338,7 +338,7 @@ void render_pieces(SDL_Renderer *renderer, Game *game) {
 }
    #+end_src
    
-** TODO Handle logic of basic movement for each pieces
+** DONE Handle logic of basic movement for each pieces
    [2021-11-28 dom 08:56]
 
    Need to understand if a given move is legal or not. This is based
@@ -355,8 +355,35 @@ void render_pieces(SDL_Renderer *renderer, Game *game) {
 
    Still need to handle all the things related to collision however.
 
-** TODO Handle eating mechanics
+   ----------------------
+   [2021-12-01 mer 16:12]
+
+   Finally finished the logic movement, to do so I implemented the
+   following functions
+
+   #+begin_src c
+int check_move_validity(Game *game, Piece *p, Pos new_pos);
+Dir compute_movement_dir(Pos start_pos, Pos end_pos);
+int check_obstacles_in_path(Game *game, Pos start_pos, Pos end_pos, Dir dir);
+void move_piece(Game *game, Piece *p, Pos new_pos);
+   #+end_src
+
+** DONE Handle eating mechanics
    [2021-11-28 dom 08:56]
+
+   ----------------------
+   [2021-12-01 mer 16:13]
+
+   The eating mechanic is implemented in the ~move_piece~ function.
+
+   #+begin_src c
+// The move is valid, do it.
+if(game->board[new_pos.x][new_pos.y]) {
+  Piece *eaten_piece = game->board[new_pos.x][new_pos.y];
+  update_player_score(game->selected_player, eaten_piece->type);
+  destroy_piece(eaten_piece);
+ }
+   #+end_src
 
 ** TODO Learn how to check memory leaks with valgrind
    [2021-11-29 lun 06:41]
@@ -365,9 +392,83 @@ void render_pieces(SDL_Renderer *renderer, Game *game) {
    memory leaks, thus with ~Valgrind~ I'm having a bit of an hard time
    understanding if I did any mistakes.
 
-** TODO Learn little highlight on selected piece
+** DONE Learn little highlight on selected piece
    [2021-11-29 lun 07:10]
 
    At each time in the game a piece can be selected by the player. We
    have to somehow indicate that, maybe by drawing a little square on
    the side of the position on which the piece resides.
+
+   -------------------
+
+   I managed to do this with the following function
+
+   #+begin_src c
+void render_pos_highlight(SDL_Renderer *renderer, Pos pos) {
+  sdl2_c(SDL_SetRenderDrawColor(renderer, HEX_COLOR(HIGHLIGHT_COLOR)));
+
+  int coords[][4] = {
+    // ----
+    // top 
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + 1,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + 1},
+    
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + 2,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + 2},
+
+    // ----
+    // bottom
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + CELL_HEIGHT - 1,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + CELL_HEIGHT - 1},
+    
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + CELL_HEIGHT - 2,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + CELL_HEIGHT - 2},
+
+    // ----
+    // left
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH + 1          , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + 1          , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH + 2          , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + 2          , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+
+    // ----
+    // right
+    {pos.x * CELL_WIDTH + CELL_WIDTH     , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH     , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH + CELL_WIDTH - 1 , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH - 1 , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH + CELL_WIDTH - 2 , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH - 2 , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+  };
+
+  for (int i = 0; i < 4*3; i++) {
+    SDL_RenderDrawLine(renderer,
+		       floorf(coords[i][0]), floorf(coords[i][1]),
+		       floorf(coords[i][2]), floorf(coords[i][3]));
+  }
+}
+   #+end_src
+
+** TODO Determine Check mate condition
+   [2021-12-01 mer 16:14]
+
+   Need to understand when the game is over so that a new game can be
+   started.
+
+   ---------------------
+   [2021-12-01 mer 16:34]
+
+   For now I simply check if the king was eaten.

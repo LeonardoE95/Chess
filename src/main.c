@@ -240,9 +240,9 @@ void destroy_game(Game *game) {
 }
 
 // Used to istantiate a particular chess piece depending on its type.
-// NOTE: the texture instantiation is de-ferred to the first call of
+//
+// NOTE: The texture instantiation is de-ferred to the first call of
 // render_piece().
-// NOTE: assume t != EMPTY (always)
 Piece *init_piece(PieceType t, Pos init_pos) {
   assert(t != EMPTY && "Piece shouldn't be EMPTY!");
   
@@ -486,40 +486,59 @@ void render_piece(SDL_Renderer *renderer, Piece *p, int selected) {
 
 void render_pos_highlight(SDL_Renderer *renderer, Pos pos) {
   sdl2_c(SDL_SetRenderDrawColor(renderer, HEX_COLOR(HIGHLIGHT_COLOR)));
+
+  int coords[][4] = {
+    // ----
+    // top 
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT},
     
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT));
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + 1),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + 1));
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + 2),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + 2));
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + 1,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + 1},
+    
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + 2,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + 2},
 
-  // ---------
+    // ----
+    // bottom
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + CELL_HEIGHT - 1,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + CELL_HEIGHT - 1},
+    
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + CELL_HEIGHT - 2,
+     pos.x * CELL_WIDTH + CELL_WIDTH , pos.y * CELL_HEIGHT + CELL_HEIGHT - 2},
 
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT),
-		     floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + 1), floorf(pos.y * CELL_HEIGHT),
-		     floorf(pos.x * CELL_WIDTH + 1), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + 2), floorf(pos.y * CELL_HEIGHT),
-		     floorf(pos.x * CELL_WIDTH + 2), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
+    // ----
+    // left
+    {pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH              , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH + 1          , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + 1          , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH + 2          , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + 2          , pos.y * CELL_HEIGHT + CELL_HEIGHT},
 
-  // ---------
+    // ----
+    // right
+    {pos.x * CELL_WIDTH + CELL_WIDTH     , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH     , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH + CELL_WIDTH - 1 , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH - 1 , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+    {pos.x * CELL_WIDTH + CELL_WIDTH - 2 , pos.y * CELL_HEIGHT,
+     pos.x * CELL_WIDTH + CELL_WIDTH - 2 , pos.y * CELL_HEIGHT + CELL_HEIGHT},
+    
+  };
 
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT - 1),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT - 1));
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT - 2),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT - 2));
-
-  // ---------
-
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + CELL_WIDTH - 1), floorf(pos.y * CELL_HEIGHT),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH - 1), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));
-  SDL_RenderDrawLine(renderer, floorf(pos.x * CELL_WIDTH + CELL_WIDTH - 2), floorf(pos.y * CELL_HEIGHT),
-		     floorf(pos.x * CELL_WIDTH + CELL_WIDTH - 2), floorf(pos.y * CELL_HEIGHT + CELL_HEIGHT));        
+  for (int i = 0; i < 4*3; i++) {
+    SDL_RenderDrawLine(renderer,
+		       floorf(coords[i][0]), floorf(coords[i][1]),
+		       floorf(coords[i][2]), floorf(coords[i][3]));
+  }
 }
 
 

@@ -70,6 +70,18 @@ typedef enum {
 
 } PieceType;
 
+typedef enum {
+  UP = 0,
+  DOWN,
+  LEFT,
+  RIGHT,
+  
+  DIAG_LU,
+  DIAG_LD,
+  DIAG_RU,
+  DIAG_RD,
+} Dir;
+
 typedef struct {
   int x;
   int y;
@@ -116,12 +128,15 @@ void *img_p(void *ptr);
 const char *type2png(PieceType t);
 void init_game(Game *game);
 void destroy_game(Game *game);
+
 Piece *init_piece(PieceType t, Pos init_pos);
 void update_selected_piece(Game *game, Pos p);
 void destroy_piece(Piece *p);
 
-int check_move(Game *game, Piece *p, Pos new_pos);
+int check_move_validity(Game *game, Piece *p, Pos new_pos);
 void move_piece(Game *game, Piece *p, Pos new_pos);
+Dir compute_movement_dir(Pos start_pos, Pos end_pos);
+int check_obstacles_in_path(Game *game, Pos start_pos, Pos end_pos, Dir dir);
 
 void update_player_score(Player *p, PieceType t);
 
@@ -276,131 +291,106 @@ void update_selected_piece(Game *game, Pos p) {
   return;
 }
 
-int check_move(Game *game, Piece *p, Pos new_pos) {
+// Computes direction of movement based on starting pos and ending pos.
+Dir compute_movement_dir(Pos start_pos, Pos end_pos) {
+  int dx = end_pos.x - start_pos.x;
+  int dy = end_pos.y - start_pos.y;
+
+  // basic 4-movements
+  if (dx == 0 && dy < 0) { return UP;      }
+  if (dx == 0 && dy > 0) { return DOWN;    }
+  if (dy == 0 && dx < 0) { return LEFT;    }  
+  if (dy == 0 && dx > 0) { return RIGHT;   }
+
+  // other 4-diagonal movements
+  if (dy < 0  && dx < 0) { return DIAG_LU; }
+  if (dy < 0  && dx > 0) { return DIAG_RU; }
+  if (dy > 0  && dx < 0) { return DIAG_LD; }
+  if (dy > 0  && dx > 0) { return DIAG_RD; }
+
+  fprintf(stderr, "[ERROR] - dx (%d) and dy (%d) are not valid!\n", dx, dy);
+  exit(1);
+}
+
+int check_move_validity(Game *game, Piece *p, Pos new_pos) {
   // returns 1 if the piece p can move from its current position to
   // new_pos, 0 otherwise.
   Pos old_pos = p->pos;
   int valid = 0;
+  Piece *eating_piece = game->board[new_pos.x][new_pos.y];
+  Dir movement_dir = compute_movement_dir(p->pos, new_pos);
 
   int dx = new_pos.x - old_pos.x;
   int dy = new_pos.y - old_pos.y;
 
-  Piece *eating_piece = game->board[new_pos.x][new_pos.y];
-
   switch(p->type) {
-  case B_PAWN:
 
     // at the start the pawn can choose to move two squares below.
-    if (old_pos.y == 1 && dy == 2 && dx == 0) {
-      if (!eating_piece) {
-	valid = 1; 
-      }
-    }
-    
-    // in general however it can only move one square below.
-    else if (dy == 1 && dx == 0) {
-      if (!eating_piece) {
-	valid = 1; 
-      }
+    // in general however it can only move one square below.     
+  case B_PAWN:
+    if (!eating_piece &&
+	((old_pos.y == 1 && dy == 2 && dx == 0) || (dy == 1 && dx == 0))) {
+      valid = 1;
     }
 
-    // unless its trying to eat some piece using the diagonals.
-    else if (dy == 1 && abs(dx) == 1) {
-      if (eating_piece) {
-	valid = 1;
-      }
+    else if (eating_piece && dy == 1 && abs(dx) == 1) {
+      valid = 1;
     }
     
     break;
 
   case W_PAWN:
-
-    // at the start the pawn can choose to move two squares below.
-    if (old_pos.y == 6 && dy == -2 && dx == 0) {
-      if (!eating_piece) {
-	valid = 1; 
-      }      
-    }
-    
-    // in general however it can only move one square below.
-    else if (dy == -1 && dx == 0) {
-      if (!eating_piece) {
-	valid = 1; 
-      }            
+    if (!eating_piece &&
+	((old_pos.y == 6 && dy == -2 && dx == 0) || (dy == -1 && dx == 0))) {
+      valid = 1;
     }
 
-    // unless its trying to eat some piece using the diagonals.
-    else if (dy == -1 && abs(dx) == 1) {
-      if (eating_piece) {
-	valid = 1;
-      }      
-    }
+    else if (eating_piece && dy == -1 && abs(dx) == 1) {
+      valid = 1;
+    }    
     
     break;
 
-
+  // -----------
   case B_ROOK:
   case W_ROOK:
-    // TODO: this can be definitely abstracted over.
-    if (!dx) {
-      valid = 1;
-      
-      // collision check
-      if (dy < 0) {
-	// we're moving up, from higher coords to lower coords
-	for (int y = old_pos.y - 1; y > new_pos.y; y--) {
-	  if(game->board[new_pos.x][y]) {
-	    valid = 0;
-	  }
-	}
-      }
 
-      else if(dy > 0) {
-	// we're moving down, from lower coords to higher coords
-	for (int y = old_pos.y + 1; y < new_pos.y; y++) {
-	  if(game->board[new_pos.x][y]) {
-	    valid = 0;
-	  }
-	}
-      }
-    }
-
-    else if (!dy) {
-      valid = 1;
+    if ((dy && !dx) || (!dy && dx)) {
+      return check_obstacles_in_path(game, p->pos, new_pos, movement_dir);
     }
     
     break;
 
+  // -----------
   case B_BISHOP:
   case W_BISHOP:
+
     if (abs(dx) == abs(dy)) {
-      valid = 1;
+      return check_obstacles_in_path(game, p->pos, new_pos, movement_dir);
     }
     
     break;
-
+    
+  // -----------
   case B_KNIGHT:
   case W_KNIGHT:
     // TODO: implement this
     break;
 
+  // -----------
   case B_QUEEN:
   case W_QUEEN:
     // TODO: implement this
     break;
 
+  // -----------
   case B_KING:
   case W_KING:
     // TODO: implement this
     break;
 
-  case EMPTY:
-    fprintf(stderr, "[ERROR] - EMPTY clause in check move!\n");
-    exit(1);
-    break;
-
   default:
-    fprintf(stderr, "[ERROR] - Default clause in check move!\n");
+    fprintf(stderr, "[ERROR] - Default clause in check move (%d)!\n", p->type);
     exit(1);
     break;
   }
@@ -408,8 +398,109 @@ int check_move(Game *game, Piece *p, Pos new_pos) {
   return valid;
 }
 
+// This function should return 1 if the path is 'free of obstacles',
+// and 0 otherwise.
+//
+// To specify a path we need to specify a starting position, an ending
+// position, and a direction of movement.  Possible directions are:
+int check_obstacles_in_path(Game *game, Pos start_pos, Pos end_pos, Dir dir) {
+  switch(dir) {
+
+  case UP:
+    // we're moving UP, from higher y-coords to lower y-coords
+    for (int y = start_pos.y - 1; y > end_pos.y; y--) {
+      if(game->board[start_pos.x][y]) {
+	return 0;
+      }
+    }
+    
+    break;
+
+  case DOWN:
+    // we're moving DOWN, from lower y-coords to higher y-coords
+    for (int y = start_pos.y + 1; y < end_pos.y; y++) {
+      if(game->board[start_pos.x][y]) {
+	return 0;
+      }
+    }
+    break;
+    
+  case LEFT:
+    // we're moving LEFT, from higher x-coords to lower x-coords
+    for (int x = start_pos.x - 1; x > end_pos.x; x--) {
+      if(game->board[x][start_pos.y]) {
+	return 0;
+      }
+    }    
+    
+    break;
+    
+  case RIGHT:
+    // we're moving RIGHT, from lower x-coords to higher x-coords
+    for (int x = start_pos.x + 1; x < end_pos.x; x++) {
+      if(game->board[x][start_pos.y]) {
+	return 0;
+      }
+    }
+    
+    break;
+  
+  case DIAG_LU:
+    // we're moving on the LEFT-UP DIAGONAL,
+    //   from higher x-coords to lower x-coords
+    //   from higher y-coords to lower y-coords
+    for (int x = start_pos.x - 1, y = start_pos.y - 1; x > end_pos.x && y > end_pos.y; x--, y--) {
+      if(game->board[x][y]) {
+	return 0;
+      }
+    }
+    
+    break;
+    
+  case DIAG_LD:
+    // we're moving on the LEFT-DOWN DIAGONAL,
+    //   from higher x-coords to lower x-coords
+    //   from lower y-coords to higher y-coords
+    for (int x = start_pos.x - 1, y = start_pos.y + 1; x > end_pos.x && y < end_pos.y; x--, y++) {
+      if(game->board[x][y]) {
+	return 0;
+      }
+    }
+    break;
+    
+  case DIAG_RU:
+    // we're moving on the RIGHT-UP DIAGONAL,
+    //   from lower x-coords to higher x-coords
+    //   from higher y-coords to lower y-coords
+    for (int x = start_pos.x + 1, y = start_pos.y - 1; x < end_pos.x && y > end_pos.y; x++, y--) {
+      if(game->board[x][y]) {
+	return 0;
+      }
+    }    
+    break;
+    
+  case DIAG_RD:
+    // we're moving on the RIGHT-DOWN DIAGONAL,
+    //   from lower x-coords to higher x-coords
+    //   from lower y-coords to higher y-coords
+    for (int x = start_pos.x + 1, y = start_pos.y + 1; x < end_pos.x && y < end_pos.y; x++, y++) {
+      if(game->board[x][y]) {
+	return 0;
+      }
+    }
+    break;
+
+  default:
+    fprintf(stderr, "[ERROR] - default case shoulnd't be triggered!\n");
+    exit(1);
+    break;
+  }
+
+  return 1;
+}
+
 void move_piece(Game *game, Piece *p, Pos new_pos) {
-  if(!check_move(&GAME, p, new_pos)) {
+  if(!check_move_validity(&GAME, p, new_pos)) {
     return;
   }
   

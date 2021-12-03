@@ -60,9 +60,10 @@ int main(void) {
 
 	Piece *p = GAME.board[new_pos.x][new_pos.y];
 	
-	if (!GAME.selected_piece || (p && SAME_TYPE(p, GAME.selected_piece))) {
+	if (!GAME.selected_piece || (p && SAME_PLAYER(p, GAME.selected_piece))) {
 	  // player has picked up a piece
 	  update_selected_piece(&GAME, new_pos);
+
 	} else {
 	  // player has moved a piece
 	  int finished = move_piece(&GAME, GAME.selected_piece, new_pos);

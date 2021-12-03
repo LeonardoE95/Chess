@@ -58,12 +58,13 @@ void init_game(Game *game) {
     }
   }
 
+  game->valid_moves_count = 0;
+  
   game->b_player.player_name = B_PLAYER_NAME;
   game->w_player.player_name = W_PLAYER_NAME;
   
   // NOTE: we assume black starts
   game->selected_player= &game->b_player;
-  
 }
 
 void destroy_game(Game *game) {
@@ -107,6 +108,7 @@ void update_selected_piece(Game *game, Pos p) {
   if (piece) {
     if ((IS_PIECE_BLACK(piece->type) && IS_PLAYER_BLACK(game)) || (IS_PIECE_WHITE(piece->type) && IS_PLAYER_WHITE(game))) {
       game->selected_piece = piece;
+      update_valid_moves(game);
     } else {
       game->selected_piece = NULL;
     }
@@ -122,17 +124,19 @@ Dir compute_movement_dir(Pos start_pos, Pos end_pos) {
   int dx = end_pos.x - start_pos.x;
   int dy = end_pos.y - start_pos.y;
 
+  if (dx == 0 && dy == 0) { return STILL; }
+  
   // basic 4-movements
-  if (dx == 0 && dy < 0) { return UP;      }
-  if (dx == 0 && dy > 0) { return DOWN;    }
-  if (dy == 0 && dx < 0) { return LEFT;    }  
-  if (dy == 0 && dx > 0) { return RIGHT;   }
+  if (dx == 0 && dy < 0)  { return UP;      }
+  if (dx == 0 && dy > 0)  { return DOWN;    }
+  if (dy == 0 && dx < 0)  { return LEFT;    }  
+  if (dy == 0 && dx > 0)  { return RIGHT;   }
 
   // other 4-diagonal movements
-  if (dy < 0  && dx < 0) { return DIAG_LU; }
-  if (dy < 0  && dx > 0) { return DIAG_RU; }
-  if (dy > 0  && dx < 0) { return DIAG_LD; }
-  if (dy > 0  && dx > 0) { return DIAG_RD; }
+  if (dy < 0  && dx < 0)  { return DIAG_LU; }
+  if (dy < 0  && dx > 0)  { return DIAG_RU; }
+  if (dy > 0  && dx < 0)  { return DIAG_LD; }
+  if (dy > 0  && dx > 0)  { return DIAG_RD; }
 
   fprintf(stderr, "[ERROR] - dx (%d) and dy (%d) are not valid!\n", dx, dy);
   exit(1);
@@ -145,6 +149,10 @@ int check_move_validity(Game *game, Piece *p, Pos new_pos) {
   Piece *eating_piece = game->board[new_pos.x][new_pos.y];
   Dir movement_dir = compute_movement_dir(p->pos, new_pos);
 
+  if (movement_dir == STILL) {
+    return 0; // edge-case
+  }
+  
   int dx = new_pos.x - old_pos.x;
   int dy = new_pos.y - old_pos.y;
 
@@ -366,6 +374,9 @@ int move_piece(Game *game, Piece *p, Pos new_pos) {
     game->selected_player = IS_PLAYER_WHITE(game) ? &game->b_player : &game->w_player;
   }
 
+  // reset valid positions
+  game->valid_moves_count = 0;
+
   return finished;
 }
 
@@ -374,4 +385,47 @@ int move_piece(Game *game, Piece *p, Pos new_pos) {
 void update_player_score(Player *p, PieceType t) {
   assert(p->score_count < 16 && "score count must be < 16!\n");
   p->score[p->score_count++] = t;
+}
+
+// ----------
+
+void add_valid_move(Game *game, Pos new_pos) {
+  if (game->valid_moves_count + 1 >= MAX_VALID_MOVES) {
+    fprintf(stderr, "[ERROR] - Array valid_moves completely filled!");
+    exit(1);
+  }
+
+  game->valid_moves[game->valid_moves_count++] = new_pos;
+
+  return;
+}
+
+// Determines which moves are valid out of all possible moves
+// depending on the current selected piece.
+void update_valid_moves(Game *game) {
+  game->valid_moves_count = 0;
+  
+  if (!game->selected_piece) {
+    // No piece is selected, therefore no moves are valid.
+    return; 
+  }
+
+  // iterate over all possible position and check if piece can be
+  // moved there.
+  for (int x = 0; x < BOARD_WIDTH; x++) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      Pos p = (Pos) {.x = x, .y = y};
+      Piece *eating_piece = game->board[p.x][p.y];
+
+      // TODO: instead of checking here if we're trying to move on the
+      // player's own pieces, we should instead do that within the
+      // check_move_validity().
+      if (check_move_validity(game, game->selected_piece, p) &&
+	  (!eating_piece || (eating_piece && !SAME_PLAYER(eating_piece, game->selected_piece)))) {
+	add_valid_move(game, p);
+      }
+    }
+  }
+
+  return;
 }

@@ -471,4 +471,132 @@ void render_pos_highlight(SDL_Renderer *renderer, Pos pos) {
    ---------------------
    [2021-12-01 mer 16:34]
 
-   For now I simply check if the king was eaten.
+   For now I simply check if the king was eaten and if it was I end
+   the game. This however is not how things should be: I should end
+   the game when the king is in check mate.
+
+   To implement this kind of behavior I should develop a system for
+   checking all legal moves in the board at any given time.
+
+** DONE Determine legal moves
+   [2021-12-03 ven 14:08]
+
+   I added an array to the game struct to contain all the possible
+   legal moves for the current selected piece.
+
+   #+begin_src c
+  // NOTE: at most a piece can move in <= 8 * 4 = 32 different positions
+  Pos valid_moves[MAX_VALID_MOVES];
+  int valid_moves_count;
+   #+end_src
+
+   I then added the following two functions which are used to update
+   the valid moves after a piece has been selected.
+
+   #+begin_src c
+void update_valid_moves(Game *game);
+void add_valid_move(Game *game, Pos new_pos);
+   #+end_src
+
+   The implementation for ~update_valid_moves()~ is pretty
+   straight-forward: I iterate over all possible position and check
+   for each one if the piece can be moved.
+
+   #+begin_src c
+void update_valid_moves(Game *game) {
+  game->valid_moves_count = 0;
+  
+  if (!game->selected_piece) {
+    // No piece is selected, therefore no moves are valid.
+    return; 
+  }
+
+  // iterate over all possible position and check if piece can be
+  // moved there.
+  for (int x = 0; x < BOARD_WIDTH; x++) {
+    for (int y = 0; y < BOARD_HEIGHT; y++) {
+      Pos p = (Pos) {.x = x, .y = y};
+      Piece *eating_piece = game->board[p.x][p.y];
+
+      // TODO: instead of checking here if we're trying to move on the
+      // player's own pieces, we should instead do that within the
+      // check_move_validity().
+      if (check_move_validity(game, game->selected_piece, p) &&
+	  (!eating_piece || (eating_piece && !SAME_PLAYER(eating_piece, game->selected_piece)))) {
+	add_valid_move(game, p);
+      }
+    }
+  }
+
+  return;
+}
+   #+end_src
+
+   Then, in the ~update_selected_piece()~ function I call the function
+   after selecting the piece
+
+   #+begin_src c
+  if (piece) {
+    if ((IS_PIECE_BLACK(piece->type) && IS_PLAYER_BLACK(game)) || (IS_PIECE_WHITE(piece->type) && IS_PLAYER_WHITE(game))) {
+      game->selected_piece = piece;
+      update_valid_moves(game);
+    } else {
+      game->selected_piece = NULL;
+    }
+  }
+   #+end_src
+   
+** DONE Highlight legal moves
+   [2021-12-02 gio 11:46]
+
+   After determining which moves are legal, I want to highlight those
+   so that its clear where you can move the piece.
+
+   ----------------
+   [2021-12-03 ven 14:11]
+
+   To highlight the legal moves I simply re-used the function
+   ~render_pos_highlight()~ but with a different color.
+
+   #+begin_src c
+void render_valid_moves(SDL_Renderer *renderer, const Game *game) {
+  for (int i = 0; i < game->valid_moves_count; i++) {
+    Pos p = game->valid_moves[i];
+    render_pos_highlight(renderer, p, HEX_COLOR(HIGHLIGHT_COLOR_2));
+  }
+}
+   #+end_src
+   
+** TODO Implement special moves
+   [2021-12-02 gio 11:45]
+
+   The special movies in chess are the following one:
+
+   - when pawn can move two squares forward at the start.
+
+   - when king and rook exchange place. (tower)
+
+   - ???
+
+** TODO Implement Forsyth-Edwards notation (FEN)
+   [2021-12-02 gio 11:47]
+
+   Example of such notation:
+
+   #+begin_example
+7k/3N2qp/b5r1/2p1Q1N1/Pp4PK/7P/1P3p2/6r1w -- 7 4
+   #+end_example
+
+   The number represent empty spaces, while to each letter is
+   associated a particular chess piece as follows:
+
+   P -> pawn
+   N -> knight
+   B -> bishop
+   R -> rook
+   Q -> queen
+   K -> king
+
+   ~Uppercase~ is used ofr white pieces ("PNBRQK"), while ~lowercase~ is
+   used for black piece ("pnbrqk").  
+   

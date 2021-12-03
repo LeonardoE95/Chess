@@ -53,6 +53,7 @@ void render_game(SDL_Renderer *renderer, const Game *game) {
   SDL_RenderClear(renderer);
   
   render_board(renderer);
+  render_valid_moves(renderer, game);
   render_pieces(renderer, game);
 
   SDL_RenderPresent(renderer);  
@@ -83,7 +84,7 @@ void render_board(SDL_Renderer *renderer) {
 }
 
 void render_piece(SDL_Renderer *renderer, Piece *p, int selected) {
-  // was the piece already rendered?
+  // is this the first time we render this piece?
   if (!p->texture) {
     p->image = img_p(IMG_Load(p->image_path));
     p->texture = SDL_CreateTextureFromSurface(renderer, p->image);
@@ -99,12 +100,12 @@ void render_piece(SDL_Renderer *renderer, Piece *p, int selected) {
   SDL_RenderCopy(renderer, p->texture, NULL, &chess_pos);
   
   if (selected) {
-    render_pos_highlight(renderer, p->pos);
+    render_pos_highlight(renderer, p->pos, HEX_COLOR(HIGHLIGHT_COLOR_1));
   }
 }
 
-void render_pos_highlight(SDL_Renderer *renderer, Pos pos) {
-  sdl2_c(SDL_SetRenderDrawColor(renderer, HEX_COLOR(HIGHLIGHT_COLOR)));
+void render_pos_highlight(SDL_Renderer *renderer, Pos pos, Uint8 r, Uint8 g, Uint8 b, Uint8 a) {
+  sdl2_c(SDL_SetRenderDrawColor(renderer, r, g, b, a));
 
   int coords[][4] = {
     // ----
@@ -172,3 +173,9 @@ void render_pieces(SDL_Renderer *renderer, const Game *game) {
   }
 }
 
+void render_valid_moves(SDL_Renderer *renderer, const Game *game) {
+  for (int i = 0; i < game->valid_moves_count; i++) {
+    Pos p = game->valid_moves[i];
+    render_pos_highlight(renderer, p, HEX_COLOR(HIGHLIGHT_COLOR_2));
+  }
+}

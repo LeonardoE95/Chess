@@ -13,29 +13,12 @@
 #define CELL_WIDTH ((SCREEN_WIDTH / BOARD_WIDTH))
 #define CELL_HEIGHT ((SCREEN_HEIGHT / BOARD_HEIGHT))
 
+// represents maximum amount of different moves a single piece can do
+// at any given time.
+#define MAX_VALID_MOVES (BOARD_WIDTH * 4)
+
 #define B_PLAYER_NAME "BLACK"
 #define W_PLAYER_NAME "WHITE"
-
-// ----------------------------------------
-// R: 125, G: 148, B:  93 | Hex: #7D945D
-// R: 238, G: 238, B: 213 | Hex: #EEEED5o
-
-// RGBA, Red Green Blue Alpha
-#define BLACK            0x000000FF
-#define GRID_COLOR_1     0xEEEED500
-#define GRID_COLOR_2     0x7D945D00
-#define HIGHLIGHT_COLOR  0xEE72F100
-
-
-// Tsoding
-// https://www.twitch.tv/tsoding
-// https://github.com/tsoding
-#define HEX_COLOR(hex)							\
-  ((hex) >> (3 * 8)) & 0xFF,						\
-  ((hex) >> (2 * 8)) & 0xFF,						\
-  ((hex) >> (1 * 8)) & 0xFF,						\
-  ((hex) >> (0 * 8)) & 0xFF
-
 
 // ----------------------------------------
 // DATA STRUCTURES
@@ -69,6 +52,8 @@ typedef enum {
   DIAG_LD,
   DIAG_RU,
   DIAG_RD,
+
+  STILL,
 } Dir;
 
 typedef struct {
@@ -93,6 +78,10 @@ typedef struct {
 
 typedef struct {
   Piece *board[BOARD_WIDTH][BOARD_HEIGHT];
+  
+  // NOTE: at most a piece can move in <= 8 * 4 = 32 different positions
+  Pos valid_moves[MAX_VALID_MOVES];
+  int valid_moves_count;
 
   Player b_player;
   Player w_player;
@@ -122,6 +111,9 @@ int check_obstacles_in_path(Game *game, Pos start_pos, Pos end_pos, Dir dir);
 
 void update_player_score(Player *p, PieceType t);
 
+void update_valid_moves(Game *game);
+void add_valid_move(Game *game, Pos new_pos);
+
 // ----------------------------------------
 // UTILS MACRO
 
@@ -131,6 +123,6 @@ void update_player_score(Player *p, PieceType t);
 #define IS_PLAYER_BLACK(g) (g->selected_player == &g->b_player)
 #define IS_PLAYER_WHITE(g) (g->selected_player == &g->w_player)
 
-#define SAME_TYPE(p1, p2) ((IS_PIECE_BLACK(p1->type) && IS_PIECE_BLACK(p2->type)) || (IS_PIECE_WHITE(p1->type) && IS_PIECE_WHITE(p2->type)))
+#define SAME_PLAYER(p1, p2) ((IS_PIECE_BLACK(p1->type) && IS_PIECE_BLACK(p2->type)) || (IS_PIECE_WHITE(p1->type) && IS_PIECE_WHITE(p2->type)))
 
 #endif // GAME_H_

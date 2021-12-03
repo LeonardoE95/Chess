@@ -1,4 +1,5 @@
 # Chess
+
 Chess implementation in C using SDL2.
 
 **DISCLAIMER**: It is still a work in progress, so mind it. When I'm done I will eventually make a playlist (in italian) on my [youtube account](https://www.youtube.com/channel/UCqZe2cxQNCvgkQxUuqsIaig) detailing how I implemented it, step by step.
@@ -21,3 +22,8 @@ cd ./src
 make
 ./main
 ```
+# Assets
+
+The assets for the various chess pieces are licensed under 
+
+Cburnett, CC BY-SA 3.0 <http://creativecommons.org/licenses/by-sa/3.0/>, via Wikimedia Commons

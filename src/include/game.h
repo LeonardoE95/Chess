@@ -107,6 +107,7 @@ void destroy_piece(Piece *p);
 int check_move_validity(Game *game, Piece *p, Pos new_pos);
 int move_piece(Game *game, Piece *p, Pos new_pos);
 Dir compute_movement_dir(Pos start_pos, Pos end_pos);
+int out_of_board_pos(Pos pos);
 int check_obstacles_in_path(Game *game, Pos start_pos, Pos end_pos, Dir dir);
 
 void update_player_score(Player *p, PieceType t);

@@ -103,6 +103,8 @@ void destroy_piece(Piece *p) {
 void update_selected_piece(Game *game, Pos p) {
   // we only update the selected piece if the player is trying to pick
   // his/her own pieces, and not the enemies's.
+  assert(!out_of_board_pos(p) && "pos should be in board!");
+
   Piece *piece = game->board[p.x][p.y];
   
   if (piece) {
@@ -142,6 +144,20 @@ Dir compute_movement_dir(Pos start_pos, Pos end_pos) {
   exit(1);
 }
 
+int out_of_board_pos(Pos pos) {
+  // Returns 1 if `pos` is out of the board.
+
+  if (pos.x < 0 || pos.x >= 8) {
+    return 1;
+  }
+
+  if (pos.y < 0 || pos.y >= 8) {
+    return 1;
+  }
+  
+  return 0;
+}
+
 int check_move_validity(Game *game, Piece *p, Pos new_pos) {
   // returns 1 if the piece p can move from its current position to
   // new_pos, 0 otherwise.
@@ -149,8 +165,8 @@ int check_move_validity(Game *game, Piece *p, Pos new_pos) {
   Piece *eating_piece = game->board[new_pos.x][new_pos.y];
   Dir movement_dir = compute_movement_dir(p->pos, new_pos);
 
-  if (movement_dir == STILL) {
-    return 0; // edge-case
+  if (movement_dir == STILL || out_of_board_pos(new_pos)) {
+    return 0; // edge-case cases
   }
   
   int dx = new_pos.x - old_pos.x;

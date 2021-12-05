@@ -58,6 +58,11 @@ int main(void) {
 	  (int) floorf(event.button.x / CELL_WIDTH),
 	  (int) floorf(event.button.y / CELL_HEIGHT) };
 
+	// skip if out of board
+	if (out_of_board_pos(new_pos)) {
+	  continue;
+	}
+
 	Piece *p = GAME.board[new_pos.x][new_pos.y];
 	
 	if (!GAME.selected_piece || (p && SAME_PLAYER(p, GAME.selected_piece))) {
